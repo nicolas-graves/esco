@@ -16,34 +16,71 @@ if not os.path.isfile(green_skills_file):
     with zipfile.ZipFile(zip_filename, "r") as z:
         z.extractall("data")
 
-# TODO Here properly read the
 green_skills = pd.read_csv(
     green_skills_file,
     usecols=[
         # "conceptType",
-        # "conceptUri",
+        "conceptUri",
         "preferredLabel",
         # "status",
         "skillType",
         "reuseLevel",
         # "altLabels",
         "description",
-        # "broaderConceptUri",
+        "broaderConceptUri",
         "broaderConceptPT",
     ],
-    index_col=[
-        # "conceptType",
-        # "conceptUri",
-        "preferredLabel",
-        # "status",
-        "skillType",
-        "reuseLevel",
-        # "altLabels",
-        "description",
-        # "broaderConceptUri",
-        # "broaderConceptPT",
-    ],
+    index_col=["conceptUri"],
 )
 
+occupations = pd.read_csv(
+    "data/occupations_fr.csv",
+    usecols=[
+        # "conceptType",
+        "conceptUri",
+        # "iscoGroup",
+        "preferredLabel",
+        # "altLabels",
+        # "hiddenLabels",
+        # "status",
+        # "modifiedDate",
+        # "regulatedProfessionNote",
+        # "scopeNote",
+        # "definition",
+        # "inScheme",
+        # "description",
+        "code",
+    ],
+    index_col=["conceptUri"],
+).rename(
+    columns={
+        "preferredLabel": "occupationLabel",
+        # "description": "occupationDescription",
+        "code": "iscoCode",
+    }
+)
+
+occupation_skill_relations = pd.read_csv(
+    "data/occupationSkillRelations_fr.csv",
+    usecols=[
+        "occupationUri",
+        "relationType",
+        # "skillType",
+        "skillUri",
+    ],
+    index_col=["skillUri"],
+)
+
+df = (
+    green_skills.join(occupation_skill_relations)
+    .reset_index()
+    .set_index("occupationUri")
+    .join(occupations, how="inner")
+    .reset_index()
+    .set_index(["preferredLabel"])
+    .drop(columns=["occupationUri", "conceptUri", "broaderConceptUri"])
+)
+
+
 os.makedirs("outputs", exist_ok=True)
-green_skills.to_excel("outputs/filtered_data.xlsx")
+df.to_excel("outputs/filtered_data.xlsx")
